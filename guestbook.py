@@ -34,113 +34,36 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 DEFAULT_GUESTBOOK_NAME = 'default_guestbook'
 
 
-# We set a parent key on the 'Greetings' to ensure that they are all
-# in the same entity group. Queries across the single entity group
-# will be consistent. However, the write rate should be limited to
-# ~1/second.
-
-def guestbook_key(guestbook_name=DEFAULT_GUESTBOOK_NAME):
-    """Constructs a Datastore key for a Guestbook entity.
-
-    We use guestbook_name as the key.
-    """
-    return ndb.Key('Guestbook', guestbook_name)
-
-
-# [START greeting]
-class Author(ndb.Model):
-    """Sub model for representing an author."""
-    identity = ndb.StringProperty(indexed=False)
-    email = ndb.StringProperty(indexed=False)
-
-
-class Greeting(ndb.Model):
-    """A main model for representing an individual Guestbook entry."""
-    author = ndb.StructuredProperty(Author)
-    content = ndb.StringProperty(indexed=False)
-    date = ndb.DateTimeProperty(auto_now_add=True)
-# [END greeting]
-
-
-# [START main_page]
-class MainPage(webapp2.RequestHandler):
-
-    def get(self):
-        guestbook_name = self.request.get('guestbook_name',
-                                          DEFAULT_GUESTBOOK_NAME)
-        greetings_query = Greeting.query(
-            ancestor=guestbook_key(guestbook_name)).order(-Greeting.date)
-        greetings = greetings_query.fetch(10)
-
-        user = users.get_current_user()
-        if user:
-            url = users.create_logout_url(self.request.uri)
-            url_linktext = 'Logout'
-        else:
-            url = users.create_login_url(self.request.uri)
-            url_linktext = 'Login'
-
-        template_values = {
-            'user': user,
-            'greetings': greetings,
-            'guestbook_name': urllib.quote_plus(guestbook_name),
-            'url': url,
-            'url_linktext': url_linktext,
-        }
-
-        template = JINJA_ENVIRONMENT.get_template('index.html')
-        self.response.write(template.render(template_values))
-# [END main_page]
-
-
-# [START guestbook]
-class Guestbook(webapp2.RequestHandler):
-
-    def post(self):
-        # We set the same parent key on the 'Greeting' to ensure each
-        # Greeting is in the same entity group. Queries across the
-        # single entity group will be consistent. However, the write
-        # rate to a single entity group should be limited to
-        # ~1/second.
-        guestbook_name = self.request.get('guestbook_name',
-                                          DEFAULT_GUESTBOOK_NAME)
-        greeting = Greeting(parent=guestbook_key(guestbook_name))
-
-        if users.get_current_user():
-            greeting.author = Author(
-                    identity=users.get_current_user().user_id(),
-                    email=users.get_current_user().email())
-
-        greeting.content = self.request.get('content')
-        greeting.put()
-
-        query_params = {'guestbook_name': guestbook_name}
-        self.redirect('/?' + urllib.urlencode(query_params))
-# [END guestbook]
-
 # [START currency]
 class Currency(webapp2.RequestHandler):
 
     def get(self):
 
         url = 'http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20(%22USDSGD%22)&env=store://datatables.org/alltableswithkeys'
+
         try:
             result = urlfetch.fetch(url)
             if result.status_code == 200:
                 print(str(result.content)[222:228])
-                self.response.write(result.content)
+                #self.response.write(result.content)
             else:
                 self.response.status_code = result.status_code
         except urlfetch.Error:
             logging.exception('Caught exception fetching url')
-        #self.response.write( 'Hello World')
+        
+        template_values = {
+            'rate': str(result.content)[222:228],
+        }
+
+
+        template = JINJA_ENVIRONMENT.get_template('currency.html')
+        self.response.write(template.render(template_values))
+
 # [END currency]
 
 
 # [START app]
 app = webapp2.WSGIApplication([
-    ('/', MainPage),
-    ('/sign', Guestbook),
-    ('/currency', Currency),
+    ('/', Currency),
 ], debug=True)
 # [END app]
