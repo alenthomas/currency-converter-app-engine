@@ -17,9 +17,8 @@
 # [START imports]
 import os
 import urllib
+import logging
 
-from google.appengine.api import users
-from google.appengine.ext import ndb
 from google.appengine.api import urlfetch
 
 import jinja2
@@ -40,7 +39,6 @@ class Currency(webapp2.RequestHandler):
     def get(self):
 
         url = 'http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20(%22USDSGD%22)&env=store://datatables.org/alltableswithkeys'
-
         try:
             result = urlfetch.fetch(url)
             if result.status_code == 200:
