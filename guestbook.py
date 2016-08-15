@@ -118,9 +118,29 @@ class Guestbook(webapp2.RequestHandler):
         self.redirect('/?' + urllib.urlencode(query_params))
 # [END guestbook]
 
+# [START currency]
+class Currency(webapp2.RequestHandler):
+
+    def get(self):
+
+        url = 'http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20(%22USDSGD%22)&env=store://datatables.org/alltableswithkeys'
+        try:
+            result = urlfetch.fetch(url)
+            if result.status_code == 200:
+                print(str(result.content)[222:228])
+                self.response.write(result.content)
+            else:
+                self.response.status_code = result.status_code
+        except urlfetch.Error:
+            logging.exception('Caught exception fetching url')
+        #self.response.write( 'Hello World')
+# [END currency]
+
+
 # [START app]
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/sign', Guestbook),
+    ('/currency', Currency),
 ], debug=True)
 # [END app]
