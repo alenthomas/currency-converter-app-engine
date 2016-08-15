@@ -30,11 +30,36 @@
             margin-top: 10px;
             overflow: scroll;
     }
+    .input[readonly] {
+	    user-select: none;
+	    
+    }
+	    
     </style>
+    
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+
+    <script type="text/javascript" >
+
+    $(window).load(function(){
+	    $("#input2,#input1").keyup(function () {
+		    
+		    $('#output').val($('#input1').val() * $('#input2').val());
+		    
+	    });
+    });
+    
+    </script>
   </head>
   <body>
-    <p> Current rate
-      <p> 1 USD : {{ rate }} SGD
+    <h3> Currency Converter USD to SGD</h3>
+    <p> Current rate* : 1 USD  =  {{ rate }} SGD
+      <p> USD: <input type="text" name="input1" id="input1" value="1">
+	<input type="hidden" name="input2" id="input2" value="{{rate}}"> <a href="javascript: void(0)" onClick="calc()"></a></p>
+	<p>
+	  SGD: <input readonly="readonly" type="text" class="myClass" name="output" id="output" value="{{rate}}"></p>
+	<p>
+	  <p> *Refresh page to get most recent rate</p>
   </body>
 </html>
 {% endautoescape %}
