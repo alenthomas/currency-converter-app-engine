@@ -18,6 +18,8 @@
 import os
 import urllib
 import logging
+import json#, simplejson
+import ast
 
 from google.appengine.api import urlfetch
 
@@ -59,9 +61,45 @@ class Currency(webapp2.RequestHandler):
 
 # [END currency]
 
+# [START Data]
+
+class Data(webapp2.RequestHandler):
+
+    def get(self):
+
+        url = "http://finance.yahoo.com/connection/currency-converter-cache?bypass=true&date=20160618"
+        data = None
+        try:
+            result = urlfetch.fetch(url)
+            if result.status_code == 200:
+                #self.response.write(str(result.content)[55:-3])
+                #data = str(result.content)[55:-3]
+                print(str(result.content))
+            else:
+                self.response.status_code = result.status_code
+        except urlfetch.Error:
+            logging.exception('Caught exception fetching url')
+
+        # template_values = {
+        #     'rate': str(result.content)[222:228],
+        # }
+        #data = json.load(result.content[55:])
+        data = json.loads(result.content[55:-3])
+        print(data)
+        # # template = JINJA_ENVIRONMENT.get_template('currency.html')
+        # # self.response.write(template.render(template_values))
+        current_rate = None
+        for i in data['list']['resources']:
+            if i['resource']['fields']['symbol'] == "SGD=X":
+                current_rate = i['resource']['fields']['price']
+                print(current_rate)
+        self.response.write(current_rate)
+
+# [END DATA]
 
 # [START app]
 app = webapp2.WSGIApplication([
     ('/', Currency),
+    ('/data', Data),
 ], debug=True)
 # [END app]
