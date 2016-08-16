@@ -19,7 +19,7 @@ import os
 import urllib
 import logging
 import json#, simplejson
-import ast
+import datetime
 
 from google.appengine.api import urlfetch
 
@@ -31,9 +31,6 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     extensions=['jinja2.ext.autoescape'],
     autoescape=True)
 # [END imports]
-
-DEFAULT_GUESTBOOK_NAME = 'default_guestbook'
-
 
 # [START currency]
 class Currency(webapp2.RequestHandler):
@@ -53,6 +50,7 @@ class Currency(webapp2.RequestHandler):
         
         template_values = {
             'rate': str(result.content)[222:228],
+            'current_date': datetime.datetime.today().strftime('%Y-%m-%d'),
         }
 
 
@@ -65,41 +63,57 @@ class Currency(webapp2.RequestHandler):
 
 class Data(webapp2.RequestHandler):
 
-    def get(self):
+    def get(self, date=None):
 
-        url = "http://finance.yahoo.com/connection/currency-converter-cache?bypass=true&date=20160618"
+        url = "http://finance.yahoo.com/connection/currency-converter-cache?bypass=true&date="
+        if date:
+            url = url + str(date)
+            
         data = None
         try:
             result = urlfetch.fetch(url)
             if result.status_code == 200:
                 #self.response.write(str(result.content)[55:-3])
                 #data = str(result.content)[55:-3]
-                print(str(result.content))
+                #print(str(result.content))
+                data = None
             else:
                 self.response.status_code = result.status_code
         except urlfetch.Error:
             logging.exception('Caught exception fetching url')
 
-        # template_values = {
-        #     'rate': str(result.content)[222:228],
-        # }
-        #data = json.load(result.content[55:])
         data = json.loads(result.content[55:-3])
-        print(data)
-        # # template = JINJA_ENVIRONMENT.get_template('currency.html')
-        # # self.response.write(template.render(template_values))
+        #print(data)
+
         current_rate = None
         for i in data['list']['resources']:
             if i['resource']['fields']['symbol'] == "SGD=X":
                 current_rate = i['resource']['fields']['price']
                 print(current_rate)
-        self.response.write(current_rate)
+
+        if current_rate:
+            error = None
+        else:
+            error = "Please enter a valid date in the url. Format as YYYYMMDD"
+        template_values = {
+            'rate': current_rate,
+            'date': date,
+            'current_date': datetime.datetime.today().strftime('%Y-%m-%d'),
+            'error':error,
+        }
+        
+
+        
+        template = JINJA_ENVIRONMENT.get_template('currency.html')
+        self.response.write(template.render(template_values))
+
 
 # [END DATA]
 
 # [START app]
-app = webapp2.WSGIApplication([
+
+app = webapp2.WSGIApplication(routes=[
     ('/', Currency),
-    ('/data', Data),
+    (r'/(?P<date>\w+)', Data),
 ], debug=True)
 # [END app]
